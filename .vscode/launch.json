@@ -1,0 +1,22 @@
+{
+  "configurations": [
+    {
+      "type": "lldb",
+      "request": "launch",
+      "args": [],
+      "cwd": "${workspaceFolder:FunctionalViewComponent}",
+      "name": "Debug FunctionalViewComponentClient",
+      "program": "${workspaceFolder:FunctionalViewComponent}/.build/debug/FunctionalViewComponentClient",
+      "preLaunchTask": "swift: Build Debug FunctionalViewComponentClient"
+    },
+    {
+      "type": "lldb",
+      "request": "launch",
+      "args": [],
+      "cwd": "${workspaceFolder:FunctionalViewComponent}",
+      "name": "Release FunctionalViewComponentClient",
+      "program": "${workspaceFolder:FunctionalViewComponent}/.build/release/FunctionalViewComponentClient",
+      "preLaunchTask": "swift: Build Release FunctionalViewComponentClient"
+    }
+  ]
+}
