@@ -23,8 +23,6 @@ func hoge(arg1: Int, arg2: String, arg3: @escaping () -> Void) -> some View {
 Macro expands above into this:
 
 ```swift
-@ViewComponent
-@MainActor
 func hoge(arg1: Int, arg2: String, arg3: @escaping () -> Void) -> some View {
   struct Component: View {
     
