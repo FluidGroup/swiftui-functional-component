@@ -81,9 +81,6 @@ public struct ViewComponentMacro: BodyMacro {
       fatalError("ViewComponentMacro can only be applied to function declarations.")
     }
 
-    // 関数名を取得
-    let functionName = functionDecl.name.text
-
     // イニシャライザのコンポーネントを取得
     let initComponents = functionDecl.initializerComponents
 
