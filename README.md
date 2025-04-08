@@ -6,7 +6,6 @@ A Swift macro library that enables to make SwiftUI stateful component from funct
 
 ```swift
 @ViewComponent
-@MainActor
 func hoge(arg1: Int, arg2: String, arg3: @escaping () -> Void) -> some View {
   
   @State var count: Int = 0
