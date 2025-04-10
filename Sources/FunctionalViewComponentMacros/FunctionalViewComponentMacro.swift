@@ -5,9 +5,9 @@ import SwiftSyntaxMacros
 
 extension FunctionDeclSyntax {
   struct BodyComponents {
-    let stateDeclarations: [String]
-    let bindingDeclarations: [String]
-    let temporaryDeclarations: [String]
+    let stateDeclarations: [VariableDeclSyntax]
+    let bindingDeclarations: [VariableDeclSyntax]
+    let temporaryDeclarations: [VariableDeclSyntax]
     let viewBody: [String]
   }
 
@@ -22,24 +22,27 @@ extension FunctionDeclSyntax {
       fatalError("Function body is required")
     }
 
-    var stateDeclarations: [String] = []
-    var bindingDeclarations: [String] = []
-    var temporaryDeclarations: [String] = []
+    var stateDeclarations: [VariableDeclSyntax] = []
+    var bindingDeclarations: [VariableDeclSyntax] = []
+    var temporaryDeclarations: [VariableDeclSyntax] = []
     var viewBody: [String] = []
 
     for statement in body.statements {
-      let statementText = statement.trimmed.description
-
-      if statementText.contains("@State") {
-        stateDeclarations.append(statementText)
-      } else if statementText.contains("@Binding") {
-        bindingDeclarations.append(statementText)
-      } else if statementText.contains("var ") || statementText.contains("let ")
-        || statementText.contains("unowned let") || statementText.contains("weak var")
-      {
-        temporaryDeclarations.append(statementText)
+      
+      if let variableDecl = statement.item.as(VariableDeclSyntax.self) {
+      
+        for attribute in variableDecl.attributes {
+          if attribute.as(AttributeSyntax.self)?.kind == AttributeSyntax.init(stringLiteral: "@State").kind {
+            stateDeclarations.append(variableDecl)
+          } else if attribute.as(AttributeSyntax.self)?.attributeName.description == "Binding" {
+            bindingDeclarations.append(variableDecl)
+          } else {
+            temporaryDeclarations.append(variableDecl)
+          }            
+        }
+                      
       } else {
-        viewBody.append(statementText)
+        viewBody.append(statement.trimmed.description)
       }
     }
 
@@ -51,7 +54,7 @@ extension FunctionDeclSyntax {
     )
   }
 
-  var initializerComponents: [InitializerComponent] {
+  func initializerComponents() -> [InitializerComponent] {
     let parameters = self.signature.parameterClause.parameters
     return parameters.map { param in
       let name = param.secondName?.text ?? param.firstName.text
@@ -81,11 +84,9 @@ public struct ViewComponentMacro: BodyMacro {
       fatalError("ViewComponentMacro can only be applied to function declarations.")
     }
 
-    // イニシャライザのコンポーネントを取得
-    let initComponents = functionDecl.initializerComponents
+    let initComponents = functionDecl.initializerComponents()
 
-    // ボディのコンポーネントを取得
-    let components = functionDecl.extractBodyComponents()
+    let bodyComponents = functionDecl.extractBodyComponents()
 
     let initBlock = """
     init(\(initComponents.map { "\($0.name): \($0.type)" }.joined(separator: ", "))) {
@@ -95,22 +96,23 @@ public struct ViewComponentMacro: BodyMacro {
     
     let bodyBlock = """
     var body: some View {
-    \(components.viewBody.joined(separator: "\n").indented(1))
+    \(bodyComponents.viewBody.joined(separator: "\n").indented(1))
     }
     """
-    
+        
     let component = """
     struct Component: View {
       
-    \(initComponents.map { "let \($0.name): \($0.type.replacingOccurrences(of: "@escaping", with: "").trimmingCharacters(in: .whitespaces))" }.joined(separator: "\n").indented(1))
+    \(bodyComponents.temporaryDeclarations.map { $0.trimmed.description }.joined(separator: "\n"))
     
-    \(components.stateDeclarations.joined(separator: "\n").indented(1))
+    \(initComponents.filter { c in bodyComponents.temporaryDeclarations.contains { $0.bindings.contains { $0.pattern == c.name } } }.map { "let \($0.name): \($0.type.replacingOccurrences(of: "@escaping", with: "").trimmingCharacters(in: .whitespaces))" }.joined(separator: "\n").indented(1))
     
-    \(components.bindingDeclarations.joined(separator: "\n").indented(1))
+    \(bodyComponents.stateDeclarations.map { $0.trimmed.description }.joined(separator: "\n").indented(1))
+    
+    \(bodyComponents.bindingDeclarations.map { $0.trimmed.description }.joined(separator: "\n").indented(1))
       
     \(initBlock.indented(1))
     
-    \(components.temporaryDeclarations.joined(separator: "\n"))
                     
     \(bodyBlock.indented(1))
                 
@@ -151,4 +153,8 @@ struct FunctionalViewComponentPlugin: CompilerPlugin {
   let providingMacros: [Macro.Type] = [
     ViewComponentMacro.self
   ]
+}
+
+extension VariableDeclSyntax {
+  
 }
